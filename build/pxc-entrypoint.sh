@@ -208,6 +208,8 @@ if [ -z "$CLUSTER_JOIN" ] && [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 
 	# Get config
 	DATADIR="$(_get_config 'datadir' "$@")"
+	cpat=$(_get_cnf_config sst cpat)
+	find "$DATADIR" -mindepth 1  -regex "$cpat"  -prune  -o -exec rm -rfv {} 1>/dev/null \+
 
 	if [ ! -d "$DATADIR/mysql" ]; then
 		file_env 'MYSQL_ROOT_PASSWORD'
@@ -218,8 +220,6 @@ if [ -z "$CLUSTER_JOIN" ] && [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 		fi
 
 		mkdir -p "$DATADIR"
-		cpat=$(_get_cnf_config sst cpat)
-		find "$DATADIR" -mindepth 1  -regex "$cpat"  -prune  -o -exec rm -rfv {} 1>/dev/null \+
 
 		echo 'Initializing database'
 		"$@" --initialize-insecure --skip-ssl
