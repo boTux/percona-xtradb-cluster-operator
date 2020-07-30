@@ -5,7 +5,7 @@ BASH_XTRACEFD="5"
 
 GIT_COMMIT=$(git rev-parse HEAD)
 GIT_BRANCH=${VERSION:-$(git rev-parse --abbrev-ref HEAD | sed -e 's^/^-^g; s^[.]^-^g;' | tr '[:upper:]' '[:lower:]')}
-API="pxc.percona.com/v1-5-0"
+API="pxc.percona.com/v1-6-0"
 IMAGE=${IMAGE:-"perconalab/percona-xtradb-cluster-operator:${GIT_BRANCH}"}
 IMAGE_PXC=${IMAGE_PXC:-"perconalab/percona-xtradb-cluster-operator:master-pxc8.0"}
 IMAGE_PMM=${IMAGE_PMM:-"perconalab/percona-xtradb-cluster-operator:master-pmm"}
@@ -48,7 +48,7 @@ wait_cluster_consistency() {
 
 create_namespace() {
     if [ "${CLEAN_NAMESPACE}" == 1 ]; then
-        kubectl get ns | egrep -v "^kube-|^default|Terminating|^NAME" | awk '{print$1}' | xargs kubectl delete ns
+        kubectl get ns | egrep -v "^kube-|^default|Terminating|^NAME" | awk '{print$1}' | xargs kubectl delete ns &
     fi
 
     local namespace="$1"
@@ -207,6 +207,7 @@ compare_kubectl() {
         | $sed -e '/name: suffix/,+1d' \
         | $sed -e '/name: S3_BUCKET_PATH/,+1d' \
         | $sed -e '/name: S3_BUCKET_URL/,+1d' \
+        | $sed -e '/annotations:$/{N;N;s/annotations:\n    kubernetes.io.*\n    \(openshift.io.*\)/annotations:\n    \1/}' \
         | $sed -e '/annotations:$/{$!{N;s/annotations:\n    kubernetes.io.*//;ty;P;D;:y;d}}' \
         | $sed -e '/annotations:$/{$!{N;s/annotations:\n    cni.projectcalico.org.*//;ty;P;D;:y;d}}' \
         | $sed -e '/volumeClaimTemplates:$/{N;/  \- apiVersion.*$/ {N;/  kind.*$/ {N;/    metadata:$/{s/volumeClaimTemplates.*metadata:$/volumeClaimTemplates:\n  \- metadata:/}}}}' \
@@ -781,6 +782,7 @@ start_vault() {
     if [ $protocol == "https" ]; then
         vault_tls "$name"
         helm install $name hashicorp/vault \
+            --disable-openapi-validation \
             --version 0.6.0 \
             --namespace "$name" \
             --set dataStorage.enabled=false \
@@ -804,6 +806,7 @@ storage \"file\" {
         
     else
         helm install $name hashicorp/vault \
+            --disable-openapi-validation \
             --version 0.6.0 \
             --namespace "$name" \
             --set dataStorage.enabled=false \
